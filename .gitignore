@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/DemoCosmos.ConsoleApp/CopilotIndices/17.14.1368.60722
+/obj/Debug/net9.0/DemoCosmos.ConsoleApp.AssemblyInfo.cs
+/obj/Debug/net9.0/DemoCosmos.ConsoleApp.AssemblyInfoInputs.cache
+/obj/Debug/net9.0/DemoCosmos.ConsoleApp.assets.cache
+/obj/Debug/net9.0/DemoCosmos.ConsoleApp.GeneratedMSBuildEditorConfig.editorconfig
+*.vsidx
