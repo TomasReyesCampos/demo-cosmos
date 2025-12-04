@@ -7,6 +7,9 @@ public class TeamAssignment
     [JsonProperty("teamId")]
     public Guid TeamId { get; set; }
 
+    [JsonProperty("teamOverview")]
+    public TeamOverview? TeamOverview { get; set; }
+
     [JsonProperty("role")]
     public string? Role { get; set; }
 

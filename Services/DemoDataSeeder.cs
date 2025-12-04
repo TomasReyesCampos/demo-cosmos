@@ -45,31 +45,35 @@ public class DemoDataSeeder
         _logger.LogInformation("✅ Teams created: {Team1} ({Team1Id}) | {Team2} ({Team2Id})", 
             team1.NameDisplay, team1.Id, team2.NameDisplay, team2.Id);
 
-        // 3. Create Players within Account and assign to Teams
-        var player1 = await CreatePlayerAsync(account.Id!.Value, "Juan Pérez", "juan@email.com", team1.Id!.Value, "Forward", cancellationToken);
-        var player2 = await CreatePlayerAsync(account.Id!.Value, "Carlos López", "carlos@email.com", team1.Id!.Value, "Midfielder", cancellationToken);
-        var player3 = await CreatePlayerAsync(account.Id!.Value, "Diego García", "diego@email.com", team2.Id!.Value, "Defender", cancellationToken);
+        // Create team overviews for embedded usage
+        var team1Overview = TeamOverview.FromTeam(team1);
+        var team2Overview = TeamOverview.FromTeam(team2);
+
+        // 3. Create Players within Account and assign to Teams using embedded TeamOverviews
+        var player1 = await CreatePlayerAsync(account.Id!.Value, "Juan Pérez", "juan@email.com", team1Overview, "Forward", cancellationToken);
+        var player2 = await CreatePlayerAsync(account.Id!.Value, "Carlos López", "carlos@email.com", team1Overview, "Midfielder", cancellationToken);
+        var player3 = await CreatePlayerAsync(account.Id!.Value, "Diego García", "diego@email.com", team2Overview, "Defender", cancellationToken);
         
         _logger.LogInformation("✅ Players created and assigned:");
-        _logger.LogInformation("   - {Player1} → {Team1}", player1.FullName, team1.NameDisplay);
-        _logger.LogInformation("   - {Player2} → {Team1}", player2.FullName, team1.NameDisplay);
-        _logger.LogInformation("   - {Player3} → {Team2}", player3.FullName, team2.NameDisplay);
+        _logger.LogInformation("   - {Player1} → {Team1}", player1.FullName, team1Overview.NameDisplay);
+        _logger.LogInformation("   - {Player2} → {Team1}", player2.FullName, team1Overview.NameDisplay);
+        _logger.LogInformation("   - {Player3} → {Team2}", player3.FullName, team2Overview.NameDisplay);
 
         // 4. Create Coaches within Account
-        var coach1 = await CreateCoachAsync(account.Id!.Value, "Fernando Martínez", "fernando@email.com", "UEFA-2023", team1.Id!.Value, cancellationToken);
-        var coach2 = await CreateCoachAsync(account.Id!.Value, "Roberto Hernández", "roberto@email.com", "UEFA-2022", team2.Id!.Value, cancellationToken);
+        var coach1 = await CreateCoachAsync(account.Id!.Value, "Fernando Martínez", "fernando@email.com", "UEFA-2023", cancellationToken);
+        var coach2 = await CreateCoachAsync(account.Id!.Value, "Roberto Hernández", "roberto@email.com", "UEFA-2022", cancellationToken);
         
         _logger.LogInformation("✅ Coaches created:");
-        _logger.LogInformation("   - {Coach1} (License: {License1}) → {Team1}", coach1.FullName, coach1.LicenseNumber, team1.NameDisplay);
-        _logger.LogInformation("   - {Coach2} (License: {License2}) → {Team2}", coach2.FullName, coach2.LicenseNumber, team2.NameDisplay);
+        _logger.LogInformation("   - {Coach1} (License: {License1})", coach1.FullName, coach1.LicenseNumber);
+        _logger.LogInformation("   - {Coach2} (License: {License2})", coach2.FullName, coach2.LicenseNumber);
 
-        // 5. Create Games between Teams
-        var game1 = await CreateGameAsync(account.Id!.Value, team1.Id!.Value, team2.Id!.Value, DateTime.UtcNow.AddDays(7), cancellationToken);
-        var game2 = await CreateGameAsync(account.Id!.Value, team2.Id!.Value, team1.Id!.Value, DateTime.UtcNow.AddDays(14), cancellationToken);
+        // 5. Create Games between Teams using embedded TeamOverviews
+        var game1 = await CreateGameAsync(account.Id!.Value, team1Overview, team2Overview, DateTime.UtcNow.AddDays(7), cancellationToken);
+        var game2 = await CreateGameAsync(account.Id!.Value, team2Overview, team1Overview, DateTime.UtcNow.AddDays(14), cancellationToken);
         
         _logger.LogInformation("✅ Games scheduled:");
-        _logger.LogInformation("   - {Team1} vs {Team2} on {Date1}", team1.NameDisplay, team2.NameDisplay, game1.ScheduledAt);
-        _logger.LogInformation("   - {Team2} vs {Team1} on {Date2}", team2.NameDisplay, team1.NameDisplay, game2.ScheduledAt);
+        _logger.LogInformation("   - {Team1} vs {Team2} on {Date1}", game1.HomeTeam?.NameDisplay, game1.AwayTeam?.NameDisplay, game1.ScheduledAt);
+        _logger.LogInformation("   - {Team2} vs {Team1} on {Date2}", game2.HomeTeam?.NameDisplay, game2.AwayTeam?.NameDisplay, game2.ScheduledAt);
 
         _logger.LogInformation("✨ Demo data seeding completed successfully!");
     }
@@ -138,7 +142,7 @@ public class DemoDataSeeder
     }
 
     private async Task<Player> CreatePlayerAsync(
-        Guid accountId, string fullName, string email, Guid teamId, string role, CancellationToken cancellationToken)
+        Guid accountId, string fullName, string email, TeamOverview teamOverview, string role, CancellationToken cancellationToken)
     {
         var player = new Player
         {
@@ -150,7 +154,12 @@ public class DemoDataSeeder
             BirthDate = DateTime.UtcNow.AddYears(-25),
             TeamAssignments = new List<TeamAssignment>
             {
-                new TeamAssignment { TeamId = teamId, Role = role, JoinedAt = DateTime.UtcNow }
+                new TeamAssignment 
+                { 
+                    TeamOverview = teamOverview, 
+                    Role = role, 
+                    JoinedAt = DateTime.UtcNow 
+                }
             },
             AuditMetadata = new AuditMetadata
             {
@@ -165,8 +174,8 @@ public class DemoDataSeeder
         await _playerRepo.Create(player);
         
         // ⚠️ BREAKPOINT: Player created in DB
-        _logger.LogDebug("Player inserted with ID: {PlayerId}, PartitionKey: {PartitionKey}, AccountId: {AccountId}, TeamId: {TeamId}", 
-            player.Id, player.PartitionKey, player.AccountId, teamId);
+        _logger.LogDebug("Player inserted with ID: {PlayerId}, PartitionKey: {PartitionKey}, AccountId: {AccountId}, Team: {TeamName}", 
+            player.Id, player.PartitionKey, player.AccountId, teamOverview.NameDisplay);
 
         // Read back from DB
         var savedPlayer = await _playerRepo.Get(player.Id!.Value, player.PartitionKey);
@@ -176,7 +185,7 @@ public class DemoDataSeeder
     }
 
     private async Task<Coach> CreateCoachAsync(
-        Guid accountId, string fullName, string email, string licenseNumber, Guid teamId, CancellationToken cancellationToken)
+        Guid accountId, string fullName, string email, string licenseNumber, CancellationToken cancellationToken)
     {
         var coach = new Coach
         {
@@ -210,14 +219,14 @@ public class DemoDataSeeder
     }
 
     private async Task<Game> CreateGameAsync(
-        Guid accountId, Guid homeTeamId, Guid awayTeamId, DateTime scheduledAt, CancellationToken cancellationToken)
+        Guid accountId, TeamOverview homeTeam, TeamOverview awayTeam, DateTime scheduledAt, CancellationToken cancellationToken)
     {
         var game = new Game
         {
             Id = Guid.NewGuid(),
             AccountId = accountId,
-            HomeTeamId = homeTeamId,
-            AwayTeamId = awayTeamId,
+            HomeTeam = homeTeam,
+            AwayTeam = awayTeam,
             ScheduledAt = scheduledAt,
             IsActive = true,
             AuditMetadata = new AuditMetadata
@@ -233,8 +242,8 @@ public class DemoDataSeeder
         await _gameRepo.Create(game);
         
         // ⚠️ BREAKPOINT: Game created in DB
-        _logger.LogDebug("Game inserted with ID: {GameId}, PartitionKey: {PartitionKey}, HomeTeam: {HomeTeamId}, AwayTeam: {AwayTeamId}", 
-            game.Id, game.PartitionKey, game.HomeTeamId, game.AwayTeamId);
+        _logger.LogDebug("Game inserted with ID: {GameId}, PartitionKey: {PartitionKey}, HomeTeam: {HomeTeam}, AwayTeam: {AwayTeam}", 
+            game.Id, game.PartitionKey, game.HomeTeam?.NameDisplay, game.AwayTeam?.NameDisplay);
 
         // Read back from DB
         var savedGame = await _gameRepo.Get(game.Id!.Value, game.PartitionKey);

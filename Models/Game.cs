@@ -7,11 +7,11 @@ public class Game : BaseAuditableEntity
     [JsonProperty("accountId")]
     public Guid AccountId { get; set; }
 
-    [JsonProperty("homeTeamId")]
-    public Guid HomeTeamId { get; set; }
+    [JsonProperty("homeTeam")]
+    public TeamOverview? HomeTeam { get; set; }
 
-    [JsonProperty("awayTeamId")]
-    public Guid AwayTeamId { get; set; }
+    [JsonProperty("awayTeam")]
+    public TeamOverview? AwayTeam { get; set; }
 
     [JsonProperty("scheduledAt")]
     public DateTime ScheduledAt { get; set; }
