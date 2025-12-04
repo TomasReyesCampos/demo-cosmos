@@ -14,7 +14,9 @@ using SDDev.Net.GenericRepository.CosmosDB.Utilities;
 var config = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables()
+    .AddUserSecrets<Program>() // Add user secrets support
     .Build();
 
 // Setup DI container
@@ -26,6 +28,18 @@ services.AddSingleton<IConfiguration>(config);
 
 // Register Cosmos configuration using the configuration section
 services.Configure<CosmosDbConfiguration>(config.GetSection("Cosmos"));
+
+// Validate connection string is available
+var cosmosConnectionString = config.GetSection("Cosmos:ConnectionString").Value;
+if (string.IsNullOrEmpty(cosmosConnectionString))
+{
+    Console.WriteLine("❌ Cosmos DB connection string not found!");
+    Console.WriteLine("Please set it using one of these methods:");
+    Console.WriteLine("1. User Secrets: dotnet user-secrets set \"Cosmos:ConnectionString\" \"your-connection-string\"");
+    Console.WriteLine("2. Environment Variable: set COSMOS__CONNECTIONSTRING=\"your-connection-string\"");
+    Console.WriteLine("3. appsettings.Development.json file (ensure it's in .gitignore)");
+    Environment.Exit(1);
+}
 
 // Register CosmosClient
 services.AddSingleton<CosmosClient>(sp =>
